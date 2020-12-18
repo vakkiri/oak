@@ -24,10 +24,9 @@ function create(geometry, obj) {
 	obj.verts = verts;
 	obj.indices = new Uint16Array(geometry.indices);
 
-	// TODO: this coupling feels wrong
-	// instead we should probably just fire some signal or update a flag
-	// signalling the geometry is loaded, and let higher level code update
-	// the renderer.
+	// TODO: remove this coupling by allowing higher level code to
+	// add to renderer when verts/indices are first detected
+	// possibly introduce a stale bit on update
 	render.add(obj);
 }
 
