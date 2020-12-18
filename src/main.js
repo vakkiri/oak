@@ -6,10 +6,16 @@
  */
 
 import * as cube from './geometry/cube.js';
-import * as geo from './geometry/geometric.js';
 import * as vmem from './geometry/vertex_memory.js';
+import * as scripts from './scripting/register.js';
 
 var c = cube.create();
+var c2 = cube.create();
+
+mat4.translate(c.mat, c.mat, [-0.0, 0.0, -6.0]);
+mat4.translate(c2.mat, c2.mat, [-1.0, -1.0, -8.0]);
+scripts.register(c, 'rotate');
+scripts.register(c2, 'rotate');
 
 main();
 
@@ -63,15 +69,20 @@ function main() {
 		}
 	}
 
-	const buffers = initBuffers(gl);
+	c.buffers = initBuffers(gl, c);
+	c2.buffers = initBuffers(gl, c2);
+
+	const objs = [c, c2];
 
 	var then = 0;
 
 	function update(now) {
-		const deltaTime = now - then;
+		const delta = (now - then) * 0.001;
 		then = now;
 
-		drawScene(gl, programInfo, buffers, deltaTime);
+		scripts.update(delta);
+
+		drawScene(gl, programInfo, objs);
 
 		requestAnimationFrame(update);
 	}
@@ -79,13 +90,11 @@ function main() {
 	requestAnimationFrame(update);
 }
 
-function initBuffers(gl) {
+function initBuffers(gl, obj) {
 	const positionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-	mat4.translate(c.mat, c.mat, [-0.0, 0.0, -6.0]);
-
-	gl.bufferData(gl.ARRAY_BUFFER, c.verts, gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, obj.verts, gl.STATIC_DRAW);
 
 
 	const faceColors = [
@@ -107,17 +116,16 @@ function initBuffers(gl) {
 	const indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, c.indices, gl.STATIC_DRAW);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, obj.indices, gl.STATIC_DRAW);
 
 	return  {
 		position: positionBuffer,
 		color: colorBuffer,
-		indices: indexBuffer,
-		vertex_count: c.indices.length,
+		indices: indexBuffer
 	};
 }
 
-function drawScene(gl, programInfo, buffers, deltaTime) {
+function drawScene(gl, programInfo, objs) {
 	gl.clearColor(0.3, 0.6, 0.9, 1.0);
 	gl.clearDepth(1.0);
 	gl.enable(gl.DEPTH_TEST);
@@ -137,64 +145,63 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
 			zNear,
 			zFar);
 
-	const modelViewMatrix = c.mat;
+	objs.forEach(obj => {
+		const modelViewMatrix = obj.mat;
 
-	mat4.rotateZ(c.mat, c.mat, 0.001);
-	mat4.rotateY(c.mat, c.mat, 0.002);
+		// This defines how the position buffer maps to the vertexPosition attr
+		{
+			const numComponents = 3;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
 
-	// This defines how the position buffer maps to the vertexPosition attr
-	{
-		const numComponents = 3;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, obj.buffers.position);
+			gl.vertexAttribPointer(
+				programInfo.attribLocations.vertexPosition,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+		}
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.vertexPosition,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
-	}
+		{
+			const numComponents = 4;
+			const type = gl.FLOAT;
+			const normalize = false;
+			const stride = 0;
+			const offset = 0;
+			gl.bindBuffer(gl.ARRAY_BUFFER, obj.buffers.color);
+			gl.vertexAttribPointer(
+				programInfo.attribLocations.vertexColor,
+				numComponents,
+				type,
+				normalize,
+				stride,
+				offset);
+			gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+		}
 
-	{
-		const numComponents = 4;
-		const type = gl.FLOAT;
-		const normalize = false;
-		const stride = 0;
-		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.vertexColor,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
-	}
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, obj.buffers.indices);
+		gl.useProgram(programInfo.program);
+		gl.uniformMatrix4fv(
+			programInfo.uniformLocations.projectionMatrix,
+			false,
+			projectionMatrix);
+		gl.uniformMatrix4fv(
+			programInfo.uniformLocations.modelViewMatrix,
+			false,
+			modelViewMatrix);
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
-	gl.useProgram(programInfo.program);
-	gl.uniformMatrix4fv(
-		programInfo.uniformLocations.projectionMatrix,
-		false,
-		projectionMatrix);
-	gl.uniformMatrix4fv(
-		programInfo.uniformLocations.modelViewMatrix,
-		false,
-		modelViewMatrix);
-
-    {
-        const vertexCount = buffers.vertex_count;
-        const type = gl.UNSIGNED_SHORT;
-        const offset = 0;
-        gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-    }
+		{
+			const vertexCount = obj.indices.length;
+			const type = gl.UNSIGNED_SHORT;
+			const offset = 0;
+			gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+		}
+	})
 }
 
 function initShaderProgram(gl, vsSource, fsSource) {

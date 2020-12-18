@@ -10,12 +10,14 @@
 import * as vmem from './vertex_memory.js';
 
 export function create() {
+	// TODO: refactor this out into template json files
 	const num_verts = 8;
 	const num_indices = 36;
 	const vref = vmem.allocate(num_verts);
 	var verts = vmem.get(vref, num_verts);
 	var mat = mat4.create();
 
+	console.log(vref);
 	vmem.set(vref, -1.0, -1.0, 1.0);
 	vmem.set(vref+1, 1.0, -1.0, 1.0);
 	vmem.set(vref+2, 1.0, 1.0, 1.0);
