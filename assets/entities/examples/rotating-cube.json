@@ -1,0 +1,4 @@
+{
+	"geometry": "/assets/models/basic/cube.json",
+	"scripts": ["rotate"]
+}

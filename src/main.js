@@ -25,9 +25,6 @@ function main() {
 
 	render.init(canvas);
 
-	render.add(c);
-	render.add(c2);
-
 	var then = 0;
 
 	function update(now) {
