@@ -48,3 +48,10 @@ export function set(i, x, y, z) {
 export function get(i, size) {
 	return verts.subarray(i*3, (i+size)*3);
 }
+
+export function free(i, size) {
+	for (var v = i; v < i + size; ++v) {
+		used[v] = 0;
+	}
+}
+

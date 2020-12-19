@@ -6,7 +6,7 @@
  */
 
 import * as vmem from './geometry/vertex_memory.js';
-import * as scripts from './scripting/register.js';
+import * as scripting from './scripting/register.js';
 import * as render from './render/render3D.js';
 import * as gameobject from './core/gameobject.js';
 
@@ -33,7 +33,7 @@ function main() {
 		const delta = (now - then) * 0.001;
 		then = now;
 
-		scripts.update(delta);
+		scripting.update(delta);
 
 		render.drawScene();
 

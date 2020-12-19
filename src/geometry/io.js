@@ -6,7 +6,6 @@
  */
 
 import * as vmem from './vertex_memory.js'
-import * as render from '../render/render3D.js'
 
 function create(geometry, obj) {
 	const num_verts = geometry.verts.length / 3;
@@ -23,11 +22,7 @@ function create(geometry, obj) {
 
 	obj.verts = verts;
 	obj.indices = new Uint16Array(geometry.indices);
-
-	// TODO: remove this coupling by allowing higher level code to
-	// add to renderer when verts/indices are first detected
-	// possibly introduce a stale bit on update
-	render.add(obj);
+	obj.vref = vref;
 }
 
 export function load(path, obj) {

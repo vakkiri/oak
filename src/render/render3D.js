@@ -8,6 +8,8 @@
  */
 
 var objs = [];
+var add_queue = [];
+var ready_queue = [];
 var gl;
 var programInfo;
 
@@ -70,6 +72,34 @@ export function init(canvas) {
 			aspect,
 			zNear,
 			zFar);
+}
+
+/*
+ * If an object may not have finished loading, use queueAdd to
+ * add it to a queue of objects which will be added to the renderer
+ * once they have valid vertices/indices.
+ */
+
+export function queueAdd(obj) {
+	add_queue.push(obj);
+}
+
+function checkReady(obj) {
+	if (obj.verts !== undefined && obj.indices !== undefined) {
+		ready_queue.push(obj);
+	}
+}
+
+function removeReady() {
+	add_queue = add_queue.filter(obj => obj.verts === undefined || obj.indices === undefined);
+}
+
+function addReady() {
+	add_queue.forEach(obj => checkReady(obj));
+	while (ready_queue.length > 0) {
+		add(ready_queue.pop());
+	}
+	removeReady();
 }
 
 export function add(obj) {
@@ -177,6 +207,9 @@ export function drawScene() {
 	gl.depthFunc(gl.LEQUAL);
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	// Add any queued objects which are ready
+	addReady();
 
 	objs.forEach(obj => drawObject(obj));
 }
