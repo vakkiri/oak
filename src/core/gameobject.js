@@ -12,16 +12,15 @@ import * as geo from '../geometry/geometry.js';
 import * as scripting from '../scripting/register.js';
 import * as renderer from '../render/render3D.js';
 
-export function create(geometry, scripts) {
+export function create(model_name, scripts) {
 	var obj = {
-		geometry: geo.create(geometry),
+		model: model_name,
+		mat: mat4.create(),
 	};
 
-	scripts.forEach(script => scripting.register(obj.geometry, script));
+	scripts.forEach(script => scripting.register(obj, script));
 
-	// We do a queued add to the rendere because geometry loads async.
-	// The renderer will add the object once it has valid geometry.
-	renderer.queueAdd(obj.geometry);
+	renderer.add(obj);
 
 	return obj;
 }

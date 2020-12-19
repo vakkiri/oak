@@ -8,8 +8,7 @@
  */
 
 var objs = [];
-var add_queue = [];
-var ready_queue = [];
+var buffers = {};
 var gl;
 var programInfo;
 
@@ -74,44 +73,15 @@ export function init(canvas) {
 			zFar);
 }
 
-/*
- * If an object may not have finished loading, use queueAdd to
- * add it to a queue of objects which will be added to the renderer
- * once they have valid vertices/indices.
- */
-
-export function queueAdd(obj) {
-	add_queue.push(obj);
-}
-
-function checkReady(obj) {
-	if (obj.verts !== undefined && obj.indices !== undefined) {
-		ready_queue.push(obj);
-	}
-}
-
-function removeReady() {
-	add_queue = add_queue.filter(obj => obj.verts === undefined || obj.indices === undefined);
-}
-
-function addReady() {
-	add_queue.forEach(obj => checkReady(obj));
-	while (ready_queue.length > 0) {
-		add(ready_queue.pop());
-	}
-	removeReady();
-}
-
 export function add(obj) {
-	obj.buffers = initBuffers(obj);
 	objs.push(obj);
 }
 
-function initBuffers(obj) {
+export function initBuffers(model) {
 	const positionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
-	gl.bufferData(gl.ARRAY_BUFFER, obj.verts, gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.verts), gl.STATIC_DRAW);
 
 
 	const faceColors = [
@@ -133,17 +103,19 @@ function initBuffers(obj) {
 	const indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
 
-	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, obj.indices, gl.STATIC_DRAW);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(model.indices), gl.STATIC_DRAW);
 
-	return  {
+	buffers[model.name] = {
 		position: positionBuffer,
 		color: colorBuffer,
-		indices: indexBuffer
+		indices: indexBuffer,
+		num_indices: model.indices.length,
 	};
 }
 
 function drawObject(obj) {
 	const modelViewMatrix = obj.mat;
+	const model_buffers = buffers[obj.model];
 
 	// This defines how the position buffer maps to the vertexPosition attr
 	{
@@ -153,7 +125,7 @@ function drawObject(obj) {
 		const stride = 0;
 		const offset = 0;
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, obj.buffers.position);
+		gl.bindBuffer(gl.ARRAY_BUFFER, model_buffers.position);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexPosition,
 			numComponents,
@@ -170,7 +142,7 @@ function drawObject(obj) {
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, obj.buffers.color);
+		gl.bindBuffer(gl.ARRAY_BUFFER, model_buffers.color);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexColor,
 			numComponents,
@@ -181,7 +153,7 @@ function drawObject(obj) {
 		gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
 	}
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, obj.buffers.indices);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model_buffers.indices);
 	gl.useProgram(programInfo.program);
 	gl.uniformMatrix4fv(
 		programInfo.uniformLocations.projectionMatrix,
@@ -193,10 +165,16 @@ function drawObject(obj) {
 		modelViewMatrix);
 
 	{
-		const vertexCount = obj.indices.length;
+		const vertexCount = model_buffers.num_indices;
 		const type = gl.UNSIGNED_SHORT;
 		const offset = 0;
 		gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
+	}
+}
+
+export function tryDraw(obj) {
+	if (obj.model in buffers) {
+		drawObject(obj);
 	}
 }
 
@@ -208,10 +186,7 @@ export function drawScene() {
 
 	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-	// Add any queued objects which are ready
-	addReady();
-
-	objs.forEach(obj => drawObject(obj));
+	objs.forEach(obj => tryDraw(obj));
 }
 
 function initShaderProgram() {
