@@ -10,7 +10,7 @@
 
 import * as geo from '../geometry/geometry.js';
 import * as scripting from '../scripting/register.js';
-import * as renderer from '../render/render3D.js';
+import * as renderer from '../render/render.js';
 
 export function create(model_name, scripts) {
 	var obj = {
@@ -20,7 +20,7 @@ export function create(model_name, scripts) {
 
 	scripts.forEach(script => scripting.register(obj, script));
 
-	renderer.add(obj);
+	renderer.addObject(obj);
 
 	return obj;
 }

@@ -11,9 +11,11 @@ var objs = [];
 var buffers = {};
 var gl;
 var programInfo;
+var camera;
 
 // Renderer constants -- TODO move to a config file
 const projectionMatrix = mat4.create();
+const modelViewMatrix = mat4.create();
 const fieldOfView = 45 * Math.PI / 180;
 const zNear = 0.1;
 const zFar = 100.0;
@@ -43,9 +45,11 @@ const fsSource = `
 		gl_FragColor = vColor;
 	}`;
 
-export function init(canvas) {
+export function init(canvas, renderer_camera) {
 	gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 	aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
+
+	camera = renderer_camera;
 
 	if (!gl) {
 		alert('Unable to initialize WebGL.');
@@ -73,11 +77,11 @@ export function init(canvas) {
 			zFar);
 }
 
-export function add(obj) {
+export function addObject(obj) {
 	objs.push(obj);
 }
 
-export function initBuffers(model) {
+export function addModel(model) {
 	const positionBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
@@ -114,8 +118,15 @@ export function initBuffers(model) {
 }
 
 function drawObject(obj) {
-	const modelViewMatrix = obj.mat;
+	const modelMatrix = obj.mat;
 	const model_buffers = buffers[obj.model];
+
+	mat4.identity(modelViewMatrix);
+	mat4.rotateX(modelViewMatrix, modelViewMatrix, camera.rotation.x);
+	mat4.rotateY(modelViewMatrix, modelViewMatrix, camera.rotation.y);
+	mat4.translate(modelViewMatrix, modelViewMatrix, camera.position);
+	mat4.mul(modelViewMatrix, modelViewMatrix, modelMatrix);
+	
 
 	// This defines how the position buffer maps to the vertexPosition attr
 	{
@@ -172,7 +183,7 @@ function drawObject(obj) {
 	}
 }
 
-export function tryDraw(obj) {
+function tryDraw(obj) {
 	if (obj.model in buffers) {
 		drawObject(obj);
 	}

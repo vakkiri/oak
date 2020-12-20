@@ -6,11 +6,11 @@
  */
 
 import * as geometry from '../geometry/geometry.js'
-import * as renderer from '../render/render3D.js'
+import * as renderer from '../render/render.js'
 
 function create(model) {
 	geometry.create(model);
-	renderer.initBuffers(model);
+	renderer.addModel(model);
 }
 
 export function load(path, obj) {
