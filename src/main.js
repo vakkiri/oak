@@ -11,18 +11,18 @@ import * as gameobject from './core/gameobject.js';
 import * as model_io from './io/models.js';
 
 function initTestObjects() {
-	var c = gameobject.create("cube", []);
+	var c = gameobject.create("cube", ['rotate']);
 	var c2 = gameobject.create("cube", ['rotate']);
-	//var c2 = gameobject.create("cube", ['rotate']);
 
-	mat4.translate(c.mat, c.mat, [-0.0, 0.0, -6.0]);
-	mat4.translate(c2.mat, c2.mat, [-1.0, -1.0, -8.0]);
+	mat4.translate(c.mat, c.mat, [-0.0, 0.0, -7.0]);
+	mat4.translate(c2.mat, c2.mat, [-3.0, -1.0, -12.0]);
 }
 
 main();
 
 function main() {
 	const canvas = document.querySelector('#glcanvas');
+	const gl = canvas.getContext('webgl');
 
 	// TODO: load from a config file
 	render.init(canvas, "opengl");

@@ -6,8 +6,9 @@
  *
  */
 
-import * as opengl from './opengl_renderer.js'
-import * as camera from './camera/default_camera.js'
+import * as opengl from './opengl_renderer.js';
+import * as camera from './camera/default_camera.js';
+import * as textures from './textures.js';
 
 var renderers = {
 	"opengl": opengl,
@@ -21,6 +22,7 @@ var renderer;
 export function init(canvas, renderer_name) {
 	renderer = renderers[renderer_name];
 	renderer.init(canvas, camera);
+	textures.init(canvas.getContext('webgl'));
 }
 
 /*

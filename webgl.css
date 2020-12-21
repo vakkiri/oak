@@ -1,6 +1,15 @@
 canvas {
+	margin: auto;
+	display: block;
 	background-color: black;
+	margin-top: 36px;
 }
+
 video {
 	display: none;
 }
+
+body {
+	background-color: rgb(15, 10, 20);
+}
+

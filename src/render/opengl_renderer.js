@@ -7,6 +7,9 @@
  *
  */
 
+import * as textures from './textures.js';
+
+// Module variables
 var objs = [];
 var buffers = {};
 var gl;
@@ -26,30 +29,32 @@ var aspect;
 // TODO: move shaders to separate file.
 const vsSource = `
 	attribute vec4 aVertexPosition;
-	attribute vec4 aVertexColor;
+	attribute vec2 aTextureCoord;
 
 	uniform mat4 uModelViewMatrix;
 	uniform mat4 uProjectionMatrix;
 
-	varying lowp vec4 vColor;
+	varying highp vec2 vTextureCoord;
 
 	void main(void) {
 		gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-		vColor = aVertexColor;
+		vTextureCoord = aTextureCoord;
 	}`;
 
 const fsSource = `
-	varying lowp vec4 vColor;
+	varying highp vec2 vTextureCoord;
+
+	uniform sampler2D uSampler;
 
 	void main(void) {
-		gl_FragColor = vColor;
+		gl_FragColor = texture2D(uSampler, vTextureCoord);
 	}`;
 
-export function init(canvas, renderer_camera) {
+export function init(canvas, rendererCamera) {
 	gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 	aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
 
-	camera = renderer_camera;
+	camera = rendererCamera;
 
 	if (!gl) {
 		alert('Unable to initialize WebGL.');
@@ -61,12 +66,13 @@ export function init(canvas, renderer_camera) {
 		program: shaderProgram,
 		attribLocations: {
 			vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-			vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+			textureCoord: gl.getAttribLocation(shaderProgram, 'aTextureCoord'),
 
 		},
 		uniformLocations: {
 			projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
 			modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+			uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
 		}
 	}
 
@@ -75,6 +81,8 @@ export function init(canvas, renderer_camera) {
 			aspect,
 			zNear,
 			zFar);
+
+	return gl;
 }
 
 export function addObject(obj) {
@@ -87,22 +95,10 @@ export function addModel(model) {
 
 	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.verts), gl.STATIC_DRAW);
 
+	const textureCoordBuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, textureCoordBuffer);
 
-	const faceColors = [
-		[0.8, 0.2, 0.4, 1.0],   // front
-		[0.6, 0.1, 0.5, 1.0],   // back
-	];
-
-	var colors = [];
-
-	for (var j = 0; j < faceColors.length; ++j) {
-		const c = faceColors[j];
-		colors = colors.concat(c, c, c, c);
-	}
-
-	const colorBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.uv), gl.STATIC_DRAW);
 
 	const indexBuffer = gl.createBuffer();
 	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -111,15 +107,15 @@ export function addModel(model) {
 
 	buffers[model.name] = {
 		position: positionBuffer,
-		color: colorBuffer,
+		textureCoord: textureCoordBuffer,
 		indices: indexBuffer,
-		num_indices: model.indices.length,
+		numIndices: model.indices.length,
 	};
 }
 
 function drawObject(obj) {
 	const modelMatrix = obj.mat;
-	const model_buffers = buffers[obj.model];
+	const modelBuffers = buffers[obj.model];
 
 	mat4.identity(modelViewMatrix);
 	mat4.rotateX(modelViewMatrix, modelViewMatrix, camera.rotation.x);
@@ -136,7 +132,7 @@ function drawObject(obj) {
 		const stride = 0;
 		const offset = 0;
 
-		gl.bindBuffer(gl.ARRAY_BUFFER, model_buffers.position);
+		gl.bindBuffer(gl.ARRAY_BUFFER, modelBuffers.position);
 		gl.vertexAttribPointer(
 			programInfo.attribLocations.vertexPosition,
 			numComponents,
@@ -148,23 +144,17 @@ function drawObject(obj) {
 	}
 
 	{
-		const numComponents = 4;
+		const num = 2;
 		const type = gl.FLOAT;
 		const normalize = false;
 		const stride = 0;
 		const offset = 0;
-		gl.bindBuffer(gl.ARRAY_BUFFER, model_buffers.color);
-		gl.vertexAttribPointer(
-			programInfo.attribLocations.vertexColor,
-			numComponents,
-			type,
-			normalize,
-			stride,
-			offset);
-		gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+		gl.bindBuffer(gl.ARRAY_BUFFER, modelBuffers.textureCoord);
+		gl.vertexAttribPointer(programInfo.attribLocations.textureCoord, num, type, normalize, stride, offset);
+		gl.enableVertexAttribArray(programInfo.attribLocations.textureCoord);
 	}
 
-	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model_buffers.indices);
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, modelBuffers.indices);
 	gl.useProgram(programInfo.program);
 	gl.uniformMatrix4fv(
 		programInfo.uniformLocations.projectionMatrix,
@@ -174,9 +164,13 @@ function drawObject(obj) {
 		programInfo.uniformLocations.modelViewMatrix,
 		false,
 		modelViewMatrix);
+	
+	gl.activeTexture(gl.TEXTURE0);
+	gl.bindTexture(gl.TEXTURE_2D, textures.get(0));
+	gl.uniform1i(programInfo.uniformLocations.uSampler, 0);
 
 	{
-		const vertexCount = model_buffers.num_indices;
+		const vertexCount = modelBuffers.numIndices;
 		const type = gl.UNSIGNED_SHORT;
 		const offset = 0;
 		gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);

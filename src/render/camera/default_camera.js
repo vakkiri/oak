@@ -17,17 +17,17 @@ rotation.y = 0;
 rotation.z = 0;
 
 document.addEventListener('keydown', function(event) {
-	if (event.keyCode == input.keyCode("key_left")) {
+	if (event.keyCode == input.action("cameraLeft")) {
 		rotation.y -= 0.03;
-	} else if (event.keyCode == input.keyCode("key_right")) {
+	} else if (event.keyCode == input.action("cameraRight")) {
 		rotation.y += 0.03;
-	} else if (event.keyCode == input.keyCode("key_up")) {
+	} else if (event.keyCode == input.action("cameraUp")) {
 		rotation.x -= 0.03;
-	} else if (event.keyCode == input.keyCode("key_down")) {
+	} else if (event.keyCode == input.action("cameraDown")) {
 		rotation.x += 0.03;
-	} else if (event.keyCode == input.keyCode("key_w")) {
+	} else if (event.keyCode == input.action("moveForward")) {
 		vec3.add(position, position, [0, 0, 0.2]);
-	} else if (event.keyCode == input.keyCode("key_s")) {
+	} else if (event.keyCode == input.action("moveBackward")) {
 		vec3.add(position, position, [0, 0, -0.2]);
 	}
 });
